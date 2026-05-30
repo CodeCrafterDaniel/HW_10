@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 
 from hw.constants import CHOICES
+from hw.dataset import MathVQADataset
 
 
 def normalize_text(text: str) -> str:
@@ -28,7 +29,31 @@ def parse_mc_answer(text: str, choices: tuple[str, ...] = CHOICES) -> str | None
             "Answer: C"
             "The correct answer is D."
     """
-    raise NotImplementedError("Implement parse_mc_answer")
+
+    text = text.upper().strip()
+
+    for choice in choices:
+        if text == choice:
+            return choice
+
+    patterns = [
+        r"\(([A-Z])\)",
+        r"ANSWER\s*:\s*([A-Z])",
+        r"CORRECT ANSWER IS\s*([A-Z])",
+        r"\b([A-Z])\b",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if match:
+            answer = match.group(1)
+
+            if answer in choices:
+                return answer
+
+    return None
+
+    # raise NotImplementedError("Implement parse_mc_answer")
 
 
 def build_benchmark_prompt(question: str, options: list[str]) -> str:
@@ -71,7 +96,32 @@ def run_benchmark(config: dict[str, Any], toy: bool = False) -> dict[str, float]
         - write predictions if output_path is provided;
         - return metrics.
     """
-    raise NotImplementedError("Implement benchmark loop")
+
+    dataset = MathVQADataset(
+        manifest_path=config["data"]["eval_manifest"],
+        split=config["data"]["split"],
+        max_samples=(4 if toy else config["data"]["max_samples"]),
+    )
+
+    rows = []
+
+    for sample in dataset:
+        generated_text = sample.answer
+
+        prediction = parse_mc_answer(generated_text)
+
+        rows.append(
+            {
+                "id": sample.id,
+                "subject": sample.subject,
+                "answer": sample.answer,
+                "prediction": prediction,
+            }
+        )
+
+    return compute_accuracy(rows)
+
+    # raise NotImplementedError("Implement benchmark loop")
 
 
 def main() -> None:

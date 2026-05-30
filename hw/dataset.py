@@ -86,12 +86,37 @@ class MathVQADataset(Dataset[MathVQASample]):
 
         # TODO: implement loading/filtering.
         # Hint: use load_jsonl(self.manifest_path).
-        raise NotImplementedError("Implement MathVQADataset.__init__")
+        manifest = load_jsonl(self.manifest_path)
+        manifest = [x for x in manifest if x.get('split') == split]
+
+        if max_samples is not None:
+            manifest = manifest[:max_samples]
+
+        self.manifest = manifest
+
+        # raise NotImplementedError("Implement MathVQADataset.__init__")
 
     def __len__(self) -> int:
         # TODO: return number of filtered rows.
-        raise NotImplementedError("Implement MathVQADataset.__len__")
+        return len(self.manifest)
+
+        # raise NotImplementedError("Implement MathVQADataset.__len__")
 
     def __getitem__(self, idx: int) -> MathVQASample:
         # TODO: construct and return MathVQASample.
-        raise NotImplementedError("Implement MathVQADataset.__getitem__")
+        item = self.manifest[idx]
+
+        image_path = self.root / item["image"]
+        image = Image.open(image_path).convert("RGB")
+
+        return MathVQASample(
+            id=item["id"],
+            image=image,
+            question=sanitize_question(item["question"]),
+            options=list(item["options"]),
+            answer=item["answer"],
+            subject=item["subject"],
+            source=item.get("source", "unknown"),
+        )
+
+        # raise NotImplementedError("Implement MathVQADataset.__getitem__")
